@@ -4,7 +4,11 @@ const mongoose = require('mongoose');
 const bodyParser= require('body-parser');
 const {Idea} = require('./models/Idea');
 const methodOverride = require('method-override')
+const session= require('express-session');
+const flash= require('connect-flash');
 const app = express();
+const ideas= require('./routes/ideas');
+const users= require("./routes/users");
 
 mongoose.Promise = global.Promise
 mongoose.connect('mongodb://localhost/youjot-dev', {
@@ -24,6 +28,24 @@ app.use(bodyParser.json());
 
 app.use(methodOverride('_method'))
 
+//Express Session Middleware
+app.use(session({
+    secret: 'keyboard cat',
+    resave: true,
+    saveUninitialized: true,
+     }))
+
+app.use(flash());
+
+// Global Variables
+app.use((req,res,next)=>{
+    res.locals.success_msg=req.flash('success_msg');
+    res.locals.error_msg= req.flash('error_msg');
+    res.locals.error=req.flash('error');
+    next();
+})
+
+
 const port = 5000;
 
 
@@ -38,91 +60,11 @@ app.get("/about", (req, res) => {
     res.render("about");
 })
 
-app.get("/ideas/add", (req,res)=>{
-    res.render("ideas/add");
-})
-
-app.get("/ideas/edit/:id", (req,res)=>{
-    Idea.findOne({
-        _id:req.params.id
-    })
-    .then((idea)=>{
-        res.render("ideas/edit",{idea:idea});
-    })
-    
-})
+app.use('/ideas',ideas)
+app.use("/users",users);
 
 
-app.get("/ideas",(req,res)=>{
-    Idea.find({})
-    .sort({date:'desc'})
-    .then(ideas=>{
-        console.log(ideas);
-        res.render("ideas/ideasIndex",{ideas:ideas})
-    })
-   
-})
 
-app.post("/ideas",(req,res)=>{
-    let errors=[];
-    if(!req.body.title){
-        errors.push({text:"Please add some title"});
-    }
-    if(!req.body.details){
-        errors.push({text:'Please add details'});
-    }
-
-    if(errors.length>0){
-        res.render('ideas/add', {
-            errors:errors,
-            title:req.body.title,
-            details:req.body.details
-        })
-        
-    }else{
-        const newUser= {
-            title:req.body.title,
-            details:req.body.details
-        }
-        new Idea(newUser)
-        .save()
-        .then(idea=>{
-            console.log("Idea addes Successfully"+idea);
-            res.redirect("/ideas");
-        })
-    }
-    
-});
-
-app.put("/ideas/:id",(req, res)=>{
-    Idea.findOne(
-        {_id:req.params.id}
-    ).then((idea)=>{
-       idea.title=req.body.title;
-       idea.details=req.body.details;
-
-       idea.save().then(idea=>{
-           res.redirect("/ideas");
-       })
-    })
-   
-})
-
-app.delete("/ideas/:id",(req, res)=>{
-    console.log(req.params)
-    Idea.findOne(
-        {_id:req.params.id}
-    ).then((idea)=>{
-    //    idea.title=req.body.title;
-    //    idea.details=req.body.details;
-        console.log("idea->>>>>>    "+idea)
-       Idea.deleteOne({_id:idea.id}).then(idea=>{
-           res.redirect("/ideas");
-       })
-    })
-  
-   
-})
 app.listen(port, () => {
     console.log(`Server up and running at port: ${port}`);
 })
