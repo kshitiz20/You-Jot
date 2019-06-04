@@ -1,5 +1,6 @@
 const express = require('express');
 const exphbs = require('express-handlebars');
+var handlebars  = require('./helpers/handlebars.js')(exphbs);
 const mongoose = require('mongoose');
 const bodyParser= require('body-parser');
 const {Idea} = require('./models/Idea');
@@ -9,6 +10,8 @@ const flash= require('connect-flash');
 const app = express();
 const ideas= require('./routes/ideas');
 const users= require("./routes/users");
+const todos= require("./routes/todos")
+const path= require("path");
 
 mongoose.Promise = global.Promise
 mongoose.connect('mongodb://localhost/youjot-dev', {
@@ -17,15 +20,15 @@ mongoose.connect('mongodb://localhost/youjot-dev', {
     .catch((err) => console.log(err));
 
 //Adding templating engine
-app.engine('handlebars', exphbs({
-    defaultLayout: 'main'
-}));
+app.engine('handlebars', handlebars.engine);
 app.set('view engine', 'handlebars');
 
 //Adding body parser to process the request data
 app.use(bodyParser.urlencoded({extended:false}))
 app.use(bodyParser.json());
 
+//Static Folder
+app.use(express.static(path.join(__dirname,"public")));
 app.use(methodOverride('_method'))
 
 //Express Session Middleware
@@ -50,9 +53,9 @@ const port = 5000;
 
 
 app.get("/", (req, res) => {
-    const name = "Kshitiz";
+    const ideas = "Ideas";
     res.render('index', {
-        name: name
+        name: ideas
     });
 })
 
@@ -61,6 +64,7 @@ app.get("/about", (req, res) => {
 })
 
 app.use('/ideas',ideas)
+app.use('/todos', todos)
 app.use("/users",users);
 
 
