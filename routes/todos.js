@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const { Todo } = require('../models/Todo');
+const {ensureAuthenticated}= require('../helpers/auth');
 
-router.get("/add", (req, res) => {
+router.get("/add",ensureAuthenticated, (req, res) => {
     res.render("todos/add");
 })
-router.get("/", (req, res) => {
+router.get("/", ensureAuthenticated,(req, res) => {
 
-    Todo.find({}).then(todos => {
+    Todo.find({user:req.user.id}).then(todos => {
         console.log("Todos", todos);
         res.render("todos/todosIndex", { todos: todos });
     })
@@ -16,7 +17,7 @@ router.get("/", (req, res) => {
 })
 
 
-router.post("/", (req, res) => {
+router.post("/", ensureAuthenticated,(req, res) => {
     let errors = [];
     if (!req.body.title) {
         errors.push({ text: "Please add some title" });
@@ -31,6 +32,7 @@ router.post("/", (req, res) => {
     } else {
         const newTodo = {
             title: req.body.title,
+            user:req.user.id
 
         }
         new Todo(newTodo)
@@ -43,15 +45,21 @@ router.post("/", (req, res) => {
 
 });
 
-router.get("/edit/:id", (req, res) => {
+router.get("/edit/:id", ensureAuthenticated,(req, res) => {
     Todo.findOne({ _id: req.params.id })
         .then(todo => {
-            res.render("todos/edit", { todo: todo });
+            if(todo.user!=req.user.id){
+                req.flash("error_msg","Not Authorized");
+                res.render("/todos");
+            }else{
+                res.render("todos/edit", { todo: todo });
+            }
+           
         })
 
 })
 
-router.put("/:id", (req, res) => {
+router.put("/:id",ensureAuthenticated, (req, res) => {
     Todo.findOne(
         { _id: req.params.id }
     ).then((todo) => {
@@ -64,7 +72,7 @@ router.put("/:id", (req, res) => {
 
 })
 
-router.put("/editStatus/:id", (req, res) => {
+router.put("/editStatus/:id", ensureAuthenticated,(req, res) => {
     debugger;
     Todo.findOne(
         { _id: req.params.id }
@@ -82,7 +90,7 @@ router.put("/editStatus/:id", (req, res) => {
 
 })
 
-router.delete("/:id", (req, res) => {
+router.delete("/:id",ensureAuthenticated, (req, res) => {
     Todo.remove({
         _id: req.params.id
     }).then((todo) => {

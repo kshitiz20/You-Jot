@@ -12,9 +12,15 @@ const ideas= require('./routes/ideas');
 const users= require("./routes/users");
 const todos= require("./routes/todos")
 const path= require("path");
-
+const passport= require('passport');
+const {strategy}=require("./config/passport")
+const {serialize}=require("./config/passport")
+const {deserialize}=require("./config/passport")
+const db= require('./config/db')
+//Passing passport to strategy
+strategy(passport);
 mongoose.Promise = global.Promise
-mongoose.connect('mongodb://localhost/youjot-dev', {
+mongoose.connect(db.mongoURI, {
         useNewUrlParser: true
     }).then(() => console.log('Mongo Connected'))
     .catch((err) => console.log(err));
@@ -40,16 +46,18 @@ app.use(session({
 
 app.use(flash());
 
+//Passport Middlewares
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Global Variables
 app.use((req,res,next)=>{
     res.locals.success_msg=req.flash('success_msg');
     res.locals.error_msg= req.flash('error_msg');
     res.locals.error=req.flash('error');
+    res.locals.user= req.user||null
     next();
 })
-
-
-const port = 5000;
 
 
 app.get("/", (req, res) => {
@@ -67,6 +75,9 @@ app.use('/ideas',ideas)
 app.use('/todos', todos)
 app.use("/users",users);
 
+
+
+const port =process.env.PORT|| 5000;
 
 
 app.listen(port, () => {
